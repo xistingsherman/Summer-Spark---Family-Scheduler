@@ -40,7 +40,7 @@ No two families get the same plan. No two days look alike. No silent reading for
 <td width="50%" align="center"><b>☀️ Light mode</b></td>
 </tr>
 <tr>
-<td><img src="scheduler.png" alt="Summer Spark dashboard in dark mode"></td>
+<td><img src="schedule.png" alt="Summer Spark dashboard in dark mode"></td>
 <td><img src="scheduler%20light%20mode.png" alt="Summer Spark dashboard in light mode"></td>
 </tr>
 </table>
