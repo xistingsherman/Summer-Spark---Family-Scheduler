@@ -27,74 +27,74 @@
 
     <style>
         :root {
-            /* Dark Theme Colors */
-            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            --modal-bg: #1e1b4b;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent-primary: #6366f1;
-            /* Indigo */
-            --accent-primary-hover: #4f46e5;
+            /* Dark Theme Colors - warmed to match logo.png (sunny orange/gold, teal calendar) */
+            --bg-gradient: linear-gradient(135deg, #1c1917 0%, #2b1608 100%);
+            --modal-bg: #3a2210;
+            --card-bg: rgba(58, 34, 16, 0.6);
+            --card-border: rgba(255, 200, 150, 0.1);
+            --text-main: #fdf6ec;
+            --text-muted: #cbb8a5;
+            --accent-primary: #c2410c;
+            /* Sun orange (darkened from logo's #f97316 for AA contrast with white button text) */
+            --accent-primary-hover: #9a3412;
             --accent-teal: #14b8a6;
-            /* Teal */
+            /* Calendar teal */
             --accent-teal-hover: #0d9488;
-            --accent-amber: #f59e0b;
-            /* Amber */
-            --accent-rose: #f43f5e;
-            /* Rose */
+            --accent-amber: #fbbf24;
+            /* Sun gold */
+            --accent-rose: #f87171;
+            /* Warm red */
 
-            --activity-edu-bg: rgba(99, 102, 241, 0.15);
-            --activity-edu-border: rgba(99, 102, 241, 0.4);
-            --activity-edu-text: #818cf8;
+            --activity-edu-bg: rgba(20, 184, 166, 0.15);
+            --activity-edu-border: rgba(20, 184, 166, 0.4);
+            --activity-edu-text: #2dd4bf;
 
-            --activity-phys-bg: rgba(20, 184, 166, 0.15);
-            --activity-phys-border: rgba(20, 184, 166, 0.4);
-            --activity-phys-text: #2dd4bf;
+            --activity-phys-bg: rgba(245, 158, 11, 0.15);
+            --activity-phys-border: rgba(245, 158, 11, 0.4);
+            --activity-phys-text: #fbbf24;
 
-            --activity-read-bg: rgba(244, 63, 94, 0.15);
-            --activity-read-border: rgba(244, 63, 94, 0.4);
-            --activity-read-text: #fb7185;
+            --activity-read-bg: rgba(239, 68, 68, 0.15);
+            --activity-read-border: rgba(239, 68, 68, 0.4);
+            --activity-read-text: #f87171;
 
-            --activity-other-bg: rgba(245, 158, 11, 0.15);
-            --activity-other-border: rgba(245, 158, 11, 0.4);
-            --activity-other-text: #fbbf24;
+            --activity-other-bg: rgba(249, 115, 22, 0.15);
+            --activity-other-border: rgba(249, 115, 22, 0.4);
+            --activity-other-text: #fb923c;
 
             --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
             --glass-blur: blur(12px);
         }
 
         [data-theme="light"] {
-            /* Light Theme Colors */
-            --bg-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-            --modal-bg: #ffffff;
-            --card-bg: rgba(255, 255, 255, 0.75);
-            --card-border: rgba(0, 0, 0, 0.06);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #4f46e5;
-            --accent-primary-hover: #4338ca;
+            /* Light Theme Colors - warmed to match logo.png (sunny orange/gold, teal calendar) */
+            --bg-gradient: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            --modal-bg: #fffaf5;
+            --card-bg: rgba(255, 250, 244, 0.8);
+            --card-border: rgba(120, 53, 15, 0.08);
+            --text-main: #2b1608;
+            --text-muted: #7c5f45;
+            --accent-primary: #c2410c;
+            --accent-primary-hover: #9a3412;
             --accent-teal: #0d9488;
             --accent-teal-hover: #0f766e;
             --accent-amber: #d97706;
-            --accent-rose: #e11d48;
+            --accent-rose: #dc2626;
 
-            --activity-edu-bg: rgba(79, 70, 229, 0.08);
-            --activity-edu-border: rgba(79, 70, 229, 0.25);
-            --activity-edu-text: #4338ca;
+            --activity-edu-bg: rgba(13, 148, 136, 0.08);
+            --activity-edu-border: rgba(13, 148, 136, 0.25);
+            --activity-edu-text: #0f766e;
 
-            --activity-phys-bg: rgba(13, 148, 136, 0.08);
-            --activity-phys-border: rgba(13, 148, 136, 0.25);
-            --activity-phys-text: #0f766e;
+            --activity-phys-bg: rgba(217, 119, 6, 0.08);
+            --activity-phys-border: rgba(217, 119, 6, 0.25);
+            --activity-phys-text: #b45309;
 
-            --activity-read-bg: rgba(225, 29, 72, 0.08);
-            --activity-read-border: rgba(225, 29, 72, 0.25);
-            --activity-read-text: #be123c;
+            --activity-read-bg: rgba(220, 38, 38, 0.08);
+            --activity-read-border: rgba(220, 38, 38, 0.25);
+            --activity-read-text: #b91c1c;
 
-            --activity-other-bg: rgba(217, 119, 6, 0.08);
-            --activity-other-border: rgba(217, 119, 6, 0.25);
-            --activity-other-text: #b45309;
+            --activity-other-bg: rgba(234, 88, 12, 0.08);
+            --activity-other-border: rgba(234, 88, 12, 0.25);
+            --activity-other-text: #9a3412;
 
             --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
         }
@@ -212,18 +212,18 @@
 
         .toolbar-select:focus {
             border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
         }
 
         /* Visual cue for which view mode is currently active */
         #view-mode-select[data-mode="unified"] {
             border-color: var(--accent-primary);
-            background: var(--activity-edu-bg);
+            background: var(--activity-other-bg);
         }
 
         #view-mode-select[data-mode="separate"] {
             border-color: var(--accent-teal);
-            background: var(--activity-phys-bg);
+            background: var(--activity-edu-bg);
         }
 
         /* Keyboard focus visibility across interactive elements */
@@ -560,12 +560,12 @@
         }
 
         .activity-card.edu {
-            border-color: var(--accent-primary);
+            border-color: var(--accent-teal);
             background: var(--activity-edu-bg);
         }
 
         .activity-card.phys {
-            border-color: var(--accent-teal);
+            border-color: var(--accent-amber);
             background: var(--activity-phys-bg);
         }
 
@@ -575,7 +575,7 @@
         }
 
         .activity-card.other {
-            border-color: var(--accent-amber);
+            border-color: var(--accent-primary);
             background: var(--activity-other-bg);
         }
 
@@ -602,22 +602,22 @@
         }
 
         .activity-card.edu .activity-tag-badge {
-            background: rgba(99, 102, 241, 0.2);
+            background: rgba(20, 184, 166, 0.2);
             color: var(--activity-edu-text);
         }
 
         .activity-card.phys .activity-tag-badge {
-            background: rgba(20, 184, 166, 0.2);
+            background: rgba(245, 158, 11, 0.2);
             color: var(--activity-phys-text);
         }
 
         .activity-card.read .activity-tag-badge {
-            background: rgba(244, 63, 94, 0.2);
+            background: rgba(239, 68, 68, 0.2);
             color: var(--activity-read-text);
         }
 
         .activity-card.other .activity-tag-badge {
-            background: rgba(245, 158, 11, 0.2);
+            background: rgba(249, 115, 22, 0.2);
             color: var(--activity-other-text);
         }
 
@@ -748,16 +748,16 @@
 
         /* Dropdown options readability fix */
         select option {
-            background-color: #1e1b4b !important;
+            background-color: #3a2210 !important;
             /* Matches dark theme background */
-            color: #f8fafc !important;
-            /* White text */
+            color: #fdf6ec !important;
+            /* Warm white text */
         }
 
         [data-theme="light"] select option {
-            background-color: #ffffff !important;
-            color: #0f172a !important;
-            /* Dark text */
+            background-color: #fffaf5 !important;
+            color: #2b1608 !important;
+            /* Warm dark text */
         }
 
         /* Overview modal readability */
@@ -843,37 +843,37 @@
 
             .schedule-cell {
                 min-height: 100px !important;
-                border: 1px solid #ddd !important;
+                border: 1px solid #e2d6c8 !important;
                 background: transparent !important;
             }
 
             .grid-header {
-                border: 1px solid #ddd !important;
-                background: #f5f5f5 !important;
+                border: 1px solid #e2d6c8 !important;
+                background: #faf3ea !important;
                 color: black !important;
             }
 
             .activity-card {
-                border: 1px solid #ccc !important;
+                border: 1px solid #d9cfc2 !important;
                 background: #fff !important;
                 color: #000 !important;
                 box-shadow: none !important;
             }
 
             .activity-card.edu {
-                border-left: 3px solid #6366f1 !important;
+                border-left: 3px solid #0d9488 !important;
             }
 
             .activity-card.phys {
-                border-left: 3px solid #14b8a6 !important;
+                border-left: 3px solid #b45309 !important;
             }
 
             .activity-card.read {
-                border-left: 3px solid #f43f5e !important;
+                border-left: 3px solid #dc2626 !important;
             }
 
             .activity-card.other {
-                border-left: 3px solid #f59e0b !important;
+                border-left: 3px solid #c2410c !important;
             }
 
             .resource-section {
@@ -926,13 +926,13 @@
             }
 
             body.printing-overview-only .overview-table th {
-                background: #f5f5f5 !important;
+                background: #faf3ea !important;
                 color: black !important;
             }
 
             body.printing-overview-only .overview-table th,
             body.printing-overview-only .overview-table td {
-                border: 1px solid #ccc !important;
+                border: 1px solid #d9cfc2 !important;
                 color: black !important;
             }
         }
@@ -2591,7 +2591,8 @@
     {
         "age": 10,
         "hobbies": [
-            "astronaut"
+            "astronomy",
+            "space"
         ],
         "needs": [
             "quiet-space"
@@ -2600,10 +2601,11 @@
     {
         "age": 12,
         "hobbies": [
-            "veterinarian"
+            "veterinary",
+            "animals"
         ],
         "needs": [
-            "handwriting"
+            "handwriting-practice"
         ]
     }
 ];

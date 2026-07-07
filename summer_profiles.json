@@ -1,0 +1,5 @@
+[
+  {"age": 5, "hobbies": ["dinosaurs", "basketball"], "needs": ["reading-remediation"]},
+  {"age": 10, "hobbies": ["astronomy", "space"], "needs": ["quiet-space"]},
+  {"age": 12, "hobbies": ["veterinary", "animals"], "needs": ["handwriting-practice"]}
+]
