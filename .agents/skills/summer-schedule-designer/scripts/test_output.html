@@ -1,0 +1,3071 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Summer Schedule Planner</title>
+    <script>
+        // Applied before first paint so a saved theme preference doesn't flash the default theme.
+        (function () {
+            try {
+                var storedTheme = localStorage.getItem('summerScheduleTheme');
+                if (storedTheme === 'light' || storedTheme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', storedTheme);
+                }
+            } catch (e) {
+                // localStorage unavailable (e.g. private browsing) - keep the default theme.
+            }
+        })();
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            /* Dark Theme Colors - warmed to match logo.png (sunny orange/gold, teal calendar) */
+            --bg-gradient: linear-gradient(135deg, #1c1917 0%, #2b1608 100%);
+            --modal-bg: #3a2210;
+            --card-bg: rgba(58, 34, 16, 0.6);
+            --card-border: rgba(255, 200, 150, 0.1);
+            --text-main: #fdf6ec;
+            --text-muted: #cbb8a5;
+            --accent-primary: #f97316;
+            /* Sun orange */
+            --accent-primary-hover: #ea580c;
+            --accent-teal: #14b8a6;
+            /* Calendar teal */
+            --accent-teal-hover: #0d9488;
+            --accent-amber: #fbbf24;
+            /* Sun gold */
+            --accent-rose: #f87171;
+            /* Warm red */
+
+            --activity-edu-bg: rgba(20, 184, 166, 0.15);
+            --activity-edu-border: rgba(20, 184, 166, 0.4);
+            --activity-edu-text: #2dd4bf;
+
+            --activity-phys-bg: rgba(245, 158, 11, 0.15);
+            --activity-phys-border: rgba(245, 158, 11, 0.4);
+            --activity-phys-text: #fbbf24;
+
+            --activity-read-bg: rgba(239, 68, 68, 0.15);
+            --activity-read-border: rgba(239, 68, 68, 0.4);
+            --activity-read-text: #f87171;
+
+            --activity-other-bg: rgba(249, 115, 22, 0.15);
+            --activity-other-border: rgba(249, 115, 22, 0.4);
+            --activity-other-text: #fb923c;
+
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            --glass-blur: blur(12px);
+        }
+
+        [data-theme="light"] {
+            /* Light Theme Colors - warmed to match logo.png (sunny orange/gold, teal calendar) */
+            --bg-gradient: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            --modal-bg: #fffaf5;
+            --card-bg: rgba(255, 250, 244, 0.8);
+            --card-border: rgba(120, 53, 15, 0.08);
+            --text-main: #2b1608;
+            --text-muted: #7c5f45;
+            --accent-primary: #ea580c;
+            --accent-primary-hover: #c2410c;
+            --accent-teal: #0d9488;
+            --accent-teal-hover: #0f766e;
+            --accent-amber: #d97706;
+            --accent-rose: #dc2626;
+
+            --activity-edu-bg: rgba(13, 148, 136, 0.08);
+            --activity-edu-border: rgba(13, 148, 136, 0.25);
+            --activity-edu-text: #0f766e;
+
+            --activity-phys-bg: rgba(217, 119, 6, 0.08);
+            --activity-phys-border: rgba(217, 119, 6, 0.25);
+            --activity-phys-text: #b45309;
+
+            --activity-read-bg: rgba(220, 38, 38, 0.08);
+            --activity-read-border: rgba(220, 38, 38, 0.25);
+            --activity-read-text: #b91c1c;
+
+            --activity-other-bg: rgba(234, 88, 12, 0.08);
+            --activity-other-border: rgba(234, 88, 12, 0.25);
+            --activity-other-text: #9a3412;
+
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 1.5rem;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Button Styles */
+        .btn {
+            background: var(--accent-primary);
+            color: var(--text-main);
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: var(--accent-primary-hover);
+        }
+
+        /* Toolbar */
+        .toolbar-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            padding: 1.1rem 1.35rem;
+            margin-bottom: 1rem;
+        }
+
+        .toolbar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toolbar-group-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            align-self: stretch;
+            background: var(--card-border);
+        }
+
+        .toolbar-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 0.45rem 0.9rem;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            min-width: 160px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .toolbar-select:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .toolbar-select:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Visual cue for which view mode is currently active */
+        #view-mode-select[data-mode="unified"] {
+            border-color: var(--accent-primary);
+            background: var(--activity-edu-bg);
+        }
+
+        #view-mode-select[data-mode="separate"] {
+            border-color: var(--accent-teal);
+            background: var(--activity-phys-bg);
+        }
+
+        /* Keyboard focus visibility across interactive elements */
+        a:focus-visible,
+        button:focus-visible,
+        select:focus-visible,
+        input:focus-visible,
+        .day-chip:focus-within {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: 2px;
+        }
+
+        /* Error banner for surfaced geocoding/weather failures */
+        .error-banner {
+            display: none;
+            background: var(--activity-read-bg);
+            border: 1px solid var(--activity-read-border);
+            color: var(--activity-read-text);
+            padding: 0.85rem 1.1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .error-banner:not(:empty) {
+            display: block;
+        }
+
+        .btn-overview {
+            background: var(--accent-teal);
+        }
+
+        .btn-overview:hover {
+            background: var(--accent-teal-hover);
+        }
+
+        .day-chip-group {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            max-width: 280px;
+        }
+
+        .overview-btn-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            margin-bottom: 0.75rem;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+        }
+
+        .app-header h1 {
+            font-size: 1.75rem;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(90deg, var(--text-main) 0%, var(--accent-teal) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .app-header p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .profile-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 99px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+            margin: 0.25rem;
+            font-weight: 500;
+        }
+
+        /* Weather Widget */
+        .weather-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .weather-temp {
+            font-size: 2rem;
+            font-weight: 800;
+            font-family: 'Outfit', sans-serif;
+            color: var(--accent-amber);
+        }
+
+        .weather-icon {
+            font-size: 2.5rem;
+        }
+
+        .weather-desc {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .weather-alert {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--card-border);
+        }
+
+        /* Local Attractions */
+        .attraction-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 350px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+
+        .attraction-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            position: relative;
+        }
+
+        .attraction-item:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .attraction-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-main);
+        }
+
+        .attraction-meta {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .attraction-distance {
+            color: var(--accent-teal);
+            font-weight: 700;
+        }
+
+        /* Main Content */
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-width: 0;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            background: var(--accent-primary-hover);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Schedule Grid Styling */
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(var(--day-count, 7), minmax(140px, 1fr));
+            gap: 0.5rem;
+            overflow-x: auto;
+        }
+
+        /* Day filter chips */
+        .day-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 99px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .day-chip:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .day-chip:has(input:checked) {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        .day-chip input {
+            accent-color: var(--accent-primary);
+            cursor: pointer;
+        }
+
+        .grid-header {
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            padding: 0.75rem 0.25rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            border: 1px solid var(--card-border);
+        }
+
+        .grid-header.today {
+            border-color: var(--accent-teal);
+            color: var(--accent-teal);
+            background: rgba(20, 184, 166, 0.05);
+        }
+
+        .time-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(255, 255, 255, 0.01);
+            border-radius: 6px;
+        }
+
+        .schedule-cell {
+            min-height: 120px;
+            border: 1px dashed var(--card-border);
+            border-radius: 8px;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            position: relative;
+        }
+
+        .schedule-cell:focus-within {
+            border-color: var(--accent-primary);
+            border-style: solid;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 4px;
+            padding: 0.15rem 0.4rem;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .setting-badge {
+            background: rgba(20, 184, 166, 0.1);
+            color: var(--accent-teal);
+            border: 1px solid rgba(20, 184, 166, 0.2);
+        }
+
+        .suitability-badge {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--accent-amber);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .activity-card {
+            font-size: 0.75rem;
+            padding: 0.6rem 0.75rem;
+            border-radius: 10px;
+            border-left: 4px solid transparent;
+            cursor: pointer;
+            line-height: 1.35;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .activity-card.edu {
+            border-color: var(--accent-primary);
+            background: var(--activity-edu-bg);
+        }
+
+        .activity-card.phys {
+            border-color: var(--accent-teal);
+            background: var(--activity-phys-bg);
+        }
+
+        .activity-card.read {
+            border-color: var(--accent-rose);
+            background: var(--activity-read-bg);
+        }
+
+        .activity-card.other {
+            border-color: var(--accent-amber);
+            background: var(--activity-other-bg);
+        }
+
+        .activity-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.65rem;
+        }
+
+        .activity-emoji {
+            font-size: 1.1rem;
+        }
+
+        .activity-tag-badge {
+            font-size: 0.55rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+        }
+
+        .activity-card.edu .activity-tag-badge {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--activity-edu-text);
+        }
+
+        .activity-card.phys .activity-tag-badge {
+            background: rgba(20, 184, 166, 0.2);
+            color: var(--activity-phys-text);
+        }
+
+        .activity-card.read .activity-tag-badge {
+            background: rgba(244, 63, 94, 0.2);
+            color: var(--activity-read-text);
+        }
+
+        .activity-card.other .activity-tag-badge {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--activity-other-text);
+        }
+
+        .activity-title {
+            font-weight: 700;
+            font-size: 0.8rem;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-main);
+            outline: none;
+            word-break: break-word;
+        }
+
+        .activity-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+            outline: none;
+            word-break: break-word;
+        }
+
+        .activity-card .time {
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+            border-top: 1px dashed var(--card-border);
+            padding-top: 0.25rem;
+        }
+
+        .activity-card .completed-checkbox {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            width: 12px;
+            height: 12px;
+        }
+
+        .activity-card:hover .completed-checkbox,
+        .activity-card.completed .completed-checkbox {
+            opacity: 1;
+        }
+
+        .activity-card.completed {
+            opacity: 0.45;
+            text-decoration: line-through;
+        }
+
+        /* Worksheet Resource Center */
+        .resource-section h3 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 0.5rem;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .resource-card {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .resource-card h4 {
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .resource-card p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .resource-link-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-top: 0.25rem;
+        }
+
+        .resource-link-item a {
+            color: var(--accent-teal);
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-weight: 500;
+        }
+
+        .resource-link-item a:hover {
+            text-decoration: underline;
+        }
+
+        /* Scrollbar customizing */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--card-border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Dropdown options readability fix */
+        select option {
+            background-color: #3a2210 !important;
+            /* Matches dark theme background */
+            color: #fdf6ec !important;
+            /* Warm white text */
+        }
+
+        [data-theme="light"] select option {
+            background-color: #fffaf5 !important;
+            color: #2b1608 !important;
+            /* Warm dark text */
+        }
+
+        /* Overview modal readability */
+        .modal-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .modal-content h2 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .overview-table-scroll {
+            overflow-x: auto;
+        }
+
+        .modal-content>p {
+            margin-top: 1.25rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .overview-table th,
+        .overview-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            vertical-align: top;
+            line-height: 1.6;
+            border: 1px solid var(--card-border);
+        }
+
+        .overview-table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-family: 'Outfit', sans-serif;
+            white-space: nowrap;
+        }
+
+        .overview-table td {
+            font-size: 0.9rem;
+        }
+
+        .overview-table tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Print styling overrides */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+            }
+
+            .container {
+                grid-template-columns: 1fr !important;
+                gap: 0 !important;
+            }
+
+            .sidebar,
+            .btn-group,
+            .theme-toggle-container,
+            .completed-checkbox,
+            .toolbar-card {
+                display: none !important;
+            }
+
+            .card {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin-bottom: 2rem !important;
+            }
+
+            .schedule-grid {
+                grid-template-columns: 60px repeat(var(--day-count, 7), 1fr) !important;
+                border-collapse: collapse;
+            }
+
+            .schedule-cell {
+                min-height: 100px !important;
+                border: 1px solid #e2d6c8 !important;
+                background: transparent !important;
+            }
+
+            .grid-header {
+                border: 1px solid #e2d6c8 !important;
+                background: #faf3ea !important;
+                color: black !important;
+            }
+
+            .activity-card {
+                border: 1px solid #d9cfc2 !important;
+                background: #fff !important;
+                color: #000 !important;
+                box-shadow: none !important;
+            }
+
+            .activity-card.edu {
+                border-left: 3px solid #0d9488 !important;
+            }
+
+            .activity-card.phys {
+                border-left: 3px solid #b45309 !important;
+            }
+
+            .activity-card.read {
+                border-left: 3px solid #dc2626 !important;
+            }
+
+            .activity-card.other {
+                border-left: 3px solid #ea580c !important;
+            }
+
+            .resource-section {
+                page-break-before: always;
+                margin-top: 2rem;
+            }
+
+            .separate-calendar-wrapper {
+                page-break-after: always;
+            }
+
+            .separate-calendar-wrapper:last-child {
+                page-break-after: avoid;
+            }
+
+            /* Printing a single overview modal: hide everything else */
+            body.printing-overview-only .sidebar,
+            body.printing-overview-only .panel-header,
+            body.printing-overview-only .toolbar-card,
+            body.printing-overview-only #schedule-container,
+            body.printing-overview-only .resource-section {
+                display: none !important;
+            }
+
+            body.printing-overview-only #overview-modal {
+                display: block !important;
+                position: static !important;
+                background: none !important;
+            }
+
+            body.printing-overview-only .modal-content {
+                background: transparent !important;
+                color: black !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+
+            body.printing-overview-only #print-overview-btn,
+            body.printing-overview-only #close-modal,
+            body.printing-overview-only .modal-toolbar {
+                display: none !important;
+            }
+
+            body.printing-overview-only .overview-table-scroll {
+                overflow: visible !important;
+            }
+
+            body.printing-overview-only .overview-table th {
+                background: #faf3ea !important;
+                color: black !important;
+            }
+
+            body.printing-overview-only .overview-table th,
+            body.printing-overview-only .overview-table td {
+                border: 1px solid #d9cfc2 !important;
+                color: black !important;
+            }
+        }
+
+        /* Tablet & below: stack sidebar above main content */
+        @media (max-width: 900px) {
+            body {
+                padding: 1.5rem 1rem;
+            }
+
+            .container {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+
+        /* Phone: tighten spacing and let controls stack full-width */
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem 0.75rem;
+            }
+
+            .app-header h1 {
+                font-size: 1.4rem;
+            }
+
+            .panel-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .btn-group {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .btn-group .btn {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
+
+            .toolbar-card {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem;
+            }
+
+            .toolbar-divider {
+                width: auto;
+                height: 1px;
+            }
+
+            .toolbar-select {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .day-chip-group,
+            .overview-btn-row {
+                max-width: 100%;
+            }
+
+            .overview-btn-row .btn {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
+
+            .schedule-grid {
+                grid-template-columns: 56px repeat(var(--day-count, 7), minmax(112px, 1fr));
+            }
+
+            .schedule-cell {
+                min-height: 100px;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+
+            .resource-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                padding: 1rem !important;
+                max-width: 95% !important;
+            }
+
+            .overview-table th,
+            .overview-table td {
+                padding: 0.6rem 0.75rem;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <!-- Header Card -->
+            <div class="card app-header">
+                <h1>Summer Planner</h1>
+                <p id="location-text">Loading Location...</p>
+                <div style="margin-top: 0.75rem; border-top: 1px solid var(--card-border); padding-top: 0.75rem;">
+                    <h4
+                        style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.25rem;">
+                        Profiles</h4>
+                    <div id="profile-container">
+                        <!-- Profiles will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weather Card -->
+            <div class="card" id="weather-card">
+                <div class="weather-header">
+                    <h3>Weather Forecast</h3>
+                    <div class="weather-icon" id="weather-icon">☀️</div>
+                </div>
+                <div class="weather-temp" id="weather-temp">--°F</div>
+                <div class="weather-desc" id="weather-desc">Fetching...</div>
+                <div class="weather-alert" id="weather-alert">
+                    Checking forecast to provide weather-appropriate activities...
+                </div>
+            </div>
+
+            <!-- Local Attractions Card -->
+            <div class="card">
+                <h3 style="margin-bottom: 0.75rem; font-size: 1rem;">Nearby Attractions</h3>
+                <ul class="attraction-list" id="attraction-list">
+                    <!-- Nearby activities will be loaded here -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- MAIN PANEL -->
+        <div class="main-panel">
+            <div id="error-banner" class="error-banner" role="alert"></div>
+
+            <div class="panel-header">
+                <div>
+                    <h2>Weekly Schedule</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Double-click any activity description to
+                        customize. Checkboxes mark completions.</p>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="toggleTheme()" id="theme-btn" aria-pressed="false">☀️ Light Mode</button>
+                    <button class="btn" onclick="window.print()" aria-label="Print schedule">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+                            <path
+                                d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z" />
+                        </svg> Print Schedule
+                    </button>
+                </div>
+            </div>
+
+            <!-- Toolbar Controls -->
+            <div class="card toolbar-card">
+                <div class="toolbar-group">
+                    <span class="toolbar-group-label" id="view-mode-label">🗂️ View Mode</span>
+                    <select id="view-mode-select" class="toolbar-select" onchange="handleViewModeChange()"
+                        aria-labelledby="view-mode-label" data-mode="unified">
+                        <option value="unified">Unified Calendar</option>
+                        <option value="separate">Separate Calendars (All Kids)</option>
+                    </select>
+                </div>
+
+                <div class="toolbar-divider"></div>
+
+                <div class="toolbar-group">
+                    <span class="toolbar-group-label" id="days-shown-label">📅 Days Shown</span>
+                    <div class="day-chip-group" role="group" aria-labelledby="days-shown-label">
+                        <label class="day-chip"><input type="checkbox" class="day-filter-checkbox" data-day="Monday"
+                                checked onchange="renderSchedule()"> Mon</label>
+                        <label class="day-chip"><input type="checkbox" class="day-filter-checkbox" data-day="Tuesday"
+                                checked onchange="renderSchedule()"> Tue</label>
+                        <label class="day-chip"><input type="checkbox" class="day-filter-checkbox" data-day="Wednesday"
+                                checked onchange="renderSchedule()"> Wed</label>
+                        <label class="day-chip"><input type="checkbox" class="day-filter-checkbox" data-day="Thursday"
+                                checked onchange="renderSchedule()"> Thu</label>
+                        <label class="day-chip"><input type="checkbox" class="day-filter-checkbox" data-day="Friday"
+                                checked onchange="renderSchedule()"> Fri</label>
+                        <label class="day-chip"><input type="checkbox" class="day-filter-checkbox" data-day="Saturday"
+                                checked onchange="renderSchedule()"> Sat</label>
+                        <label class="day-chip"><input type="checkbox" class="day-filter-checkbox" data-day="Sunday"
+                                checked onchange="renderSchedule()"> Sun</label>
+                    </div>
+                </div>
+
+                <div class="toolbar-divider"></div>
+
+                <div class="toolbar-group" id="filter-container">
+                    <span class="toolbar-group-label" id="child-filter-label">🧒 Filter by Child</span>
+                    <select id="child-filter" class="toolbar-select" onchange="renderSchedule()"
+                        aria-labelledby="child-filter-label">
+                        <option value="all">Show All Activities</option>
+                    </select>
+                </div>
+
+                <div class="toolbar-divider"></div>
+
+                <div class="toolbar-group">
+                    <span class="toolbar-group-label" id="shuffle-label">🔀 Activities</span>
+                    <button class="btn btn-secondary" id="shuffle-btn" onclick="shuffleWeek()"
+                        aria-labelledby="shuffle-label" title="Randomly re-roll which day gets which flexible activity (weather-driven and field-trip days stay fixed)">
+                        Shuffle Week
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal for Overview -->
+            <div id="overview-modal" class="modal"
+                style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1000;">
+                <div class="modal-content"
+                    style="background:var(--modal-bg); color:var(--text-main); border:1px solid var(--card-border); box-shadow:var(--shadow-lg); padding:1.5rem; border-radius:8px; max-width:90%; max-height:85%; overflow:auto; position:relative;">
+                    <div class="modal-toolbar">
+                        <button class="btn btn-secondary" id="print-overview-btn" style="font-size:0.8rem;">🖨️
+                            Print</button>
+                        <button class="btn btn-secondary" id="close-modal" style="font-size:0.8rem;">✖ Close</button>
+                    </div>
+                    <div id="overview-body"></div>
+                </div>
+            </div>
+
+            <!-- Overview Buttons -->
+            <div class="overview-btn-row">
+                <button class="btn btn-overview" id="overview-6-btn">📆 6‑Week Overview</button>
+                <button class="btn btn-overview" id="overview-8-btn">📆 8‑Week Overview</button>
+            </div>
+
+            <!-- Schedule Container -->
+            <div id="schedule-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <!-- Filled dynamically by javascript -->
+            </div>
+
+            <!-- Resource Center -->
+            <div class="card resource-section">
+                <h3>Worksheet & Learning Center</h3>
+                <div class="resource-grid" id="resource-grid">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data injected by python
+        const scheduleData = {
+    "Monday": {
+        "Morning": [
+            {
+                "time": "8:30 AM - 9:30 AM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "Family Morning Walk",
+                "desc": "Walk/jog at Ascot Hills Park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:15 AM",
+                "category": "phys",
+                "emoji": "\ud83e\uddf8",
+                "tag": "Physical",
+                "title": "Sensory & Motor Play",
+                "desc": "Bubbles, water play, or backyard motor-skills games",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\ud83d\udedd",
+                "tag": "Physical",
+                "title": "Active Playground Play",
+                "desc": "Playground play or tag in the yard",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\u26bd",
+                "tag": "Physical",
+                "title": "Soccer Practice",
+                "desc": "Shooting & dribbling drills in yard/park",
+                "kids": [
+                    14
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:15 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Educational",
+                "title": "Story Time & Picture Books",
+                "desc": "Parent reads aloud; point-and-name pictures and simple words",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "11:15 AM - 11:45 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udd22",
+                "tag": "Educational",
+                "title": "Counting & Shape Play",
+                "desc": "Counting games, shape sorters, and simple pattern play",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:30 AM",
+                "category": "read",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Remediation",
+                "title": "Guided Reading Practice",
+                "desc": "Phonics cards, sight words & reading log with parent",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "11:30 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udde9",
+                "tag": "Educational",
+                "title": "Math Fun & Games",
+                "desc": "Puzzle cards & counting games",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "10:45 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd8",
+                "tag": "Educational",
+                "title": "Core Study Time",
+                "desc": "Summer reading, vocabulary, or algebra prep",
+                "kids": [
+                    14
+                ]
+            }
+        ],
+        "Afternoon": [
+            {
+                "time": "2:00 PM - 3:00 PM",
+                "category": "edu",
+                "emoji": "\ud83d\udd8d\ufe0f",
+                "tag": "Creative",
+                "title": "Sensory Bin & Simple Crafts",
+                "desc": "Playdough, finger painting, or sticker crafts",
+                "kids": [
+                    5
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "2:00 PM - 3:30 PM",
+                "category": "edu",
+                "emoji": "\ud83c\udfa8",
+                "tag": "Creative",
+                "title": "Creative Art & Drawing",
+                "desc": "Drawing, painting, and craft worksheets",
+                "kids": [
+                    8
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "2:00 PM - 3:30 PM",
+                "category": "other",
+                "emoji": "\ud83d\udee0\ufe0f",
+                "tag": "Creative",
+                "title": "Hobbies & Crafts",
+                "desc": "Creative building or science model construction",
+                "kids": [
+                    14
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Time & Picture Books",
+                "desc": "Parent reads picture books aloud; quiet independent play alongside",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Reading Time",
+                "desc": "Independent reading - chapter books, novels, or hobby reading",
+                "kids": [
+                    8,
+                    14
+                ]
+            }
+        ],
+        "Evening": [
+            {
+                "time": "6:30 PM - 7:30 PM",
+                "category": "phys",
+                "emoji": "\ud83d\udeb6",
+                "tag": "Physical",
+                "title": "Evening Stroll",
+                "desc": "Neighborhood stroll or backyard active play",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "7:30 PM - 8:30 PM",
+                "category": "other",
+                "emoji": "\ud83c\udf19",
+                "tag": "Leisure",
+                "title": "Wind-down Reading",
+                "desc": "Phonics story reading & early bedtime",
+                "kids": [
+                    5,
+                    8
+                ]
+            },
+            {
+                "time": "7:30 PM - 9:00 PM",
+                "category": "other",
+                "emoji": "\ud83d\udecb\ufe0f",
+                "tag": "Leisure",
+                "title": "Tween/Teen Relaxation",
+                "desc": "Personal reading, project prep, next day planning",
+                "kids": [
+                    14
+                ]
+            }
+        ]
+    },
+    "Tuesday": {
+        "Morning": [
+            {
+                "time": "8:30 AM - 9:30 AM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "Family Morning Walk",
+                "desc": "Walk/jog at Ascot Hills Park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:15 AM",
+                "category": "phys",
+                "emoji": "\ud83e\uddf8",
+                "tag": "Physical",
+                "title": "Sensory & Motor Play",
+                "desc": "Bubbles, water play, or backyard motor-skills games",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\ud83d\udedd",
+                "tag": "Physical",
+                "title": "Active Playground Play",
+                "desc": "Playground play or tag in the yard",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\u26bd",
+                "tag": "Physical",
+                "title": "Soccer Practice",
+                "desc": "Shooting & dribbling drills in yard/park",
+                "kids": [
+                    14
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:15 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Educational",
+                "title": "Story Time & Picture Books",
+                "desc": "Parent reads aloud; point-and-name pictures and simple words",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "11:15 AM - 11:45 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udd22",
+                "tag": "Educational",
+                "title": "Counting & Shape Play",
+                "desc": "Counting games, shape sorters, and simple pattern play",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:30 AM",
+                "category": "read",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Remediation",
+                "title": "Guided Reading Practice",
+                "desc": "Phonics cards, sight words & reading log with parent",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "11:30 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udde9",
+                "tag": "Educational",
+                "title": "Math Fun & Games",
+                "desc": "Puzzle cards & counting games",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "10:45 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd8",
+                "tag": "Educational",
+                "title": "Core Study Time",
+                "desc": "Summer reading, vocabulary, or algebra prep",
+                "kids": [
+                    14
+                ]
+            }
+        ],
+        "Afternoon": [
+            {
+                "time": "2:00 PM - 3:30 PM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "El Sereno Rec Center Play",
+                "desc": "Games & sports at the park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Time & Picture Books",
+                "desc": "Parent reads picture books aloud; quiet independent play alongside",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Reading Time",
+                "desc": "Independent reading - chapter books, novels, or hobby reading",
+                "kids": [
+                    8,
+                    14
+                ]
+            }
+        ],
+        "Evening": [
+            {
+                "time": "6:30 PM - 7:30 PM",
+                "category": "phys",
+                "emoji": "\ud83d\udeb6",
+                "tag": "Physical",
+                "title": "Evening Stroll",
+                "desc": "Neighborhood stroll or backyard active play",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "7:30 PM - 8:30 PM",
+                "category": "other",
+                "emoji": "\ud83c\udf19",
+                "tag": "Leisure",
+                "title": "Wind-down Reading",
+                "desc": "Phonics story reading & early bedtime",
+                "kids": [
+                    5,
+                    8
+                ]
+            },
+            {
+                "time": "7:30 PM - 9:00 PM",
+                "category": "other",
+                "emoji": "\ud83d\udecb\ufe0f",
+                "tag": "Leisure",
+                "title": "Tween/Teen Relaxation",
+                "desc": "Personal reading, project prep, next day planning",
+                "kids": [
+                    14
+                ]
+            }
+        ]
+    },
+    "Wednesday": {
+        "Morning": [
+            {
+                "time": "8:30 AM - 9:30 AM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "Family Morning Walk",
+                "desc": "Walk/jog at Ascot Hills Park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:15 AM",
+                "category": "phys",
+                "emoji": "\ud83e\uddf8",
+                "tag": "Physical",
+                "title": "Sensory & Motor Play",
+                "desc": "Bubbles, water play, or backyard motor-skills games",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\ud83d\udedd",
+                "tag": "Physical",
+                "title": "Active Playground Play",
+                "desc": "Playground play or tag in the yard",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\u26bd",
+                "tag": "Physical",
+                "title": "Soccer Practice",
+                "desc": "Shooting & dribbling drills in yard/park",
+                "kids": [
+                    14
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:15 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Educational",
+                "title": "Story Time & Picture Books",
+                "desc": "Parent reads aloud; point-and-name pictures and simple words",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "11:15 AM - 11:45 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udd22",
+                "tag": "Educational",
+                "title": "Counting & Shape Play",
+                "desc": "Counting games, shape sorters, and simple pattern play",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:30 AM",
+                "category": "read",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Remediation",
+                "title": "Guided Reading Practice",
+                "desc": "Phonics cards, sight words & reading log with parent",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "11:30 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udde9",
+                "tag": "Educational",
+                "title": "Math Fun & Games",
+                "desc": "Puzzle cards & counting games",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "10:45 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd8",
+                "tag": "Educational",
+                "title": "Core Study Time",
+                "desc": "Summer reading, vocabulary, or algebra prep",
+                "kids": [
+                    14
+                ]
+            }
+        ],
+        "Afternoon": [
+            {
+                "time": "2:00 PM - 3:00 PM",
+                "category": "edu",
+                "emoji": "\ud83d\udd8d\ufe0f",
+                "tag": "Creative",
+                "title": "Sensory Bin & Simple Crafts",
+                "desc": "Playdough, finger painting, or sticker crafts",
+                "kids": [
+                    5
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "2:00 PM - 3:30 PM",
+                "category": "edu",
+                "emoji": "\ud83c\udfa8",
+                "tag": "Creative",
+                "title": "Creative Art & Drawing",
+                "desc": "Drawing, painting, and craft worksheets",
+                "kids": [
+                    8
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "2:00 PM - 3:30 PM",
+                "category": "other",
+                "emoji": "\ud83d\udee0\ufe0f",
+                "tag": "Creative",
+                "title": "Hobbies & Crafts",
+                "desc": "Creative building or science model construction",
+                "kids": [
+                    14
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Time & Picture Books",
+                "desc": "Parent reads picture books aloud; quiet independent play alongside",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Reading Time",
+                "desc": "Independent reading - chapter books, novels, or hobby reading",
+                "kids": [
+                    8,
+                    14
+                ]
+            }
+        ],
+        "Evening": [
+            {
+                "time": "6:30 PM - 7:30 PM",
+                "category": "phys",
+                "emoji": "\ud83d\udeb6",
+                "tag": "Physical",
+                "title": "Evening Stroll",
+                "desc": "Neighborhood stroll or backyard active play",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "7:30 PM - 8:30 PM",
+                "category": "other",
+                "emoji": "\ud83c\udf19",
+                "tag": "Leisure",
+                "title": "Wind-down Reading",
+                "desc": "Phonics story reading & early bedtime",
+                "kids": [
+                    5,
+                    8
+                ]
+            },
+            {
+                "time": "7:30 PM - 9:00 PM",
+                "category": "other",
+                "emoji": "\ud83d\udecb\ufe0f",
+                "tag": "Leisure",
+                "title": "Tween/Teen Relaxation",
+                "desc": "Personal reading, project prep, next day planning",
+                "kids": [
+                    14
+                ]
+            }
+        ]
+    },
+    "Thursday": {
+        "Morning": [
+            {
+                "time": "8:30 AM - 9:30 AM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "Family Morning Walk",
+                "desc": "Walk/jog at Ascot Hills Park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:15 AM",
+                "category": "phys",
+                "emoji": "\ud83e\uddf8",
+                "tag": "Physical",
+                "title": "Sensory & Motor Play",
+                "desc": "Bubbles, water play, or backyard motor-skills games",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\ud83d\udedd",
+                "tag": "Physical",
+                "title": "Active Playground Play",
+                "desc": "Playground play or tag in the yard",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\u26bd",
+                "tag": "Physical",
+                "title": "Soccer Practice",
+                "desc": "Shooting & dribbling drills in yard/park",
+                "kids": [
+                    14
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:15 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Educational",
+                "title": "Story Time & Picture Books",
+                "desc": "Parent reads aloud; point-and-name pictures and simple words",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "11:15 AM - 11:45 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udd22",
+                "tag": "Educational",
+                "title": "Counting & Shape Play",
+                "desc": "Counting games, shape sorters, and simple pattern play",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:30 AM",
+                "category": "read",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Remediation",
+                "title": "Guided Reading Practice",
+                "desc": "Phonics cards, sight words & reading log with parent",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "11:30 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udde9",
+                "tag": "Educational",
+                "title": "Math Fun & Games",
+                "desc": "Puzzle cards & counting games",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "10:45 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd8",
+                "tag": "Educational",
+                "title": "Core Study Time",
+                "desc": "Summer reading, vocabulary, or algebra prep",
+                "kids": [
+                    14
+                ]
+            }
+        ],
+        "Afternoon": [
+            {
+                "time": "2:00 PM - 3:30 PM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "El Sereno Rec Center Play",
+                "desc": "Games & sports at the park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Time & Picture Books",
+                "desc": "Parent reads picture books aloud; quiet independent play alongside",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Reading Time",
+                "desc": "Independent reading - chapter books, novels, or hobby reading",
+                "kids": [
+                    8,
+                    14
+                ]
+            }
+        ],
+        "Evening": [
+            {
+                "time": "6:30 PM - 7:30 PM",
+                "category": "phys",
+                "emoji": "\ud83d\udeb6",
+                "tag": "Physical",
+                "title": "Evening Stroll",
+                "desc": "Neighborhood stroll or backyard active play",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "7:30 PM - 8:30 PM",
+                "category": "other",
+                "emoji": "\ud83c\udf19",
+                "tag": "Leisure",
+                "title": "Wind-down Reading",
+                "desc": "Phonics story reading & early bedtime",
+                "kids": [
+                    5,
+                    8
+                ]
+            },
+            {
+                "time": "7:30 PM - 9:00 PM",
+                "category": "other",
+                "emoji": "\ud83d\udecb\ufe0f",
+                "tag": "Leisure",
+                "title": "Tween/Teen Relaxation",
+                "desc": "Personal reading, project prep, next day planning",
+                "kids": [
+                    14
+                ]
+            }
+        ]
+    },
+    "Friday": {
+        "Morning": [
+            {
+                "time": "9:30 AM - 12:00 PM",
+                "category": "other",
+                "emoji": "\ud83d\ude97",
+                "tag": "Field Trip",
+                "title": "Friday Day Out: Morning Outing",
+                "desc": "Pack snacks and head out! Weekly rotation suggestion: Week 1: California Science Center; Week 2: Griffith Observatory & Hike; Week 3: Huntington Gardens; Week 4: La Brea Tar Pits.",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            }
+        ],
+        "Afternoon": [
+            {
+                "time": "12:00 PM - 3:30 PM",
+                "category": "other",
+                "emoji": "\ud83c\udf54",
+                "tag": "Field Trip",
+                "title": "Outing Lunch & Exploration",
+                "desc": "Picnic or local lunch, then finish exploring the venue (museum galleries, gardens, or pier attractions) before heading home.",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Time & Picture Books",
+                "desc": "Parent reads picture books aloud; quiet independent play alongside",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Reading Time",
+                "desc": "Independent reading - chapter books, novels, or hobby reading",
+                "kids": [
+                    8,
+                    14
+                ]
+            }
+        ],
+        "Evening": [
+            {
+                "time": "6:30 PM - 7:30 PM",
+                "category": "phys",
+                "emoji": "\ud83d\udeb6",
+                "tag": "Physical",
+                "title": "Evening Stroll",
+                "desc": "Neighborhood stroll or backyard active play",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "7:30 PM - 9:00 PM",
+                "category": "other",
+                "emoji": "\ud83c\udf7f",
+                "tag": "Leisure",
+                "title": "Family Night",
+                "desc": "Movie night or board games together",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            }
+        ]
+    },
+    "Saturday": {
+        "Morning": [
+            {
+                "time": "8:30 AM - 9:30 AM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "Family Morning Walk",
+                "desc": "Walk/jog at Ascot Hills Park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:15 AM",
+                "category": "phys",
+                "emoji": "\ud83e\uddf8",
+                "tag": "Physical",
+                "title": "Sensory & Motor Play",
+                "desc": "Bubbles, water play, or backyard motor-skills games",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\ud83d\udedd",
+                "tag": "Physical",
+                "title": "Active Playground Play",
+                "desc": "Playground play or tag in the yard",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\u26bd",
+                "tag": "Physical",
+                "title": "Soccer Practice",
+                "desc": "Shooting & dribbling drills in yard/park",
+                "kids": [
+                    14
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:15 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Educational",
+                "title": "Story Time & Picture Books",
+                "desc": "Parent reads aloud; point-and-name pictures and simple words",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "11:15 AM - 11:45 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udd22",
+                "tag": "Educational",
+                "title": "Counting & Shape Play",
+                "desc": "Counting games, shape sorters, and simple pattern play",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:30 AM",
+                "category": "read",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Remediation",
+                "title": "Guided Reading Practice",
+                "desc": "Phonics cards, sight words & reading log with parent",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "11:30 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udde9",
+                "tag": "Educational",
+                "title": "Math Fun & Games",
+                "desc": "Puzzle cards & counting games",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "10:45 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd8",
+                "tag": "Educational",
+                "title": "Core Study Time",
+                "desc": "Summer reading, vocabulary, or algebra prep",
+                "kids": [
+                    14
+                ]
+            }
+        ],
+        "Afternoon": [
+            {
+                "time": "2:00 PM - 3:30 PM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "El Sereno Rec Center Play",
+                "desc": "Games & sports at the park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Time & Picture Books",
+                "desc": "Parent reads picture books aloud; quiet independent play alongside",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Reading Time",
+                "desc": "Independent reading - chapter books, novels, or hobby reading",
+                "kids": [
+                    8,
+                    14
+                ]
+            }
+        ],
+        "Evening": [
+            {
+                "time": "6:30 PM - 7:30 PM",
+                "category": "phys",
+                "emoji": "\ud83d\udeb6",
+                "tag": "Physical",
+                "title": "Evening Stroll",
+                "desc": "Neighborhood stroll or backyard active play",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "7:30 PM - 9:00 PM",
+                "category": "other",
+                "emoji": "\ud83c\udf7f",
+                "tag": "Leisure",
+                "title": "Family Night",
+                "desc": "Movie night or board games together",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            }
+        ]
+    },
+    "Sunday": {
+        "Morning": [
+            {
+                "time": "8:30 AM - 9:30 AM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "Family Morning Walk",
+                "desc": "Walk/jog at Ascot Hills Park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:15 AM",
+                "category": "phys",
+                "emoji": "\ud83e\uddf8",
+                "tag": "Physical",
+                "title": "Sensory & Motor Play",
+                "desc": "Bubbles, water play, or backyard motor-skills games",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\ud83d\udedd",
+                "tag": "Physical",
+                "title": "Active Playground Play",
+                "desc": "Playground play or tag in the yard",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "9:30 AM - 10:30 AM",
+                "category": "phys",
+                "emoji": "\u26bd",
+                "tag": "Physical",
+                "title": "Soccer Practice",
+                "desc": "Shooting & dribbling drills in yard/park",
+                "kids": [
+                    14
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:15 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Educational",
+                "title": "Story Time & Picture Books",
+                "desc": "Parent reads aloud; point-and-name pictures and simple words",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "11:15 AM - 11:45 AM",
+                "category": "edu",
+                "emoji": "\ud83d\udd22",
+                "tag": "Educational",
+                "title": "Counting & Shape Play",
+                "desc": "Counting games, shape sorters, and simple pattern play",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "10:45 AM - 11:30 AM",
+                "category": "read",
+                "emoji": "\ud83d\udcd6",
+                "tag": "Remediation",
+                "title": "Guided Reading Practice",
+                "desc": "Phonics cards, sight words & reading log with parent",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "11:30 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udde9",
+                "tag": "Educational",
+                "title": "Math Fun & Games",
+                "desc": "Puzzle cards & counting games",
+                "kids": [
+                    8
+                ]
+            },
+            {
+                "time": "10:45 AM - 12:00 PM",
+                "category": "edu",
+                "emoji": "\ud83d\udcd8",
+                "tag": "Educational",
+                "title": "Core Study Time",
+                "desc": "Summer reading, vocabulary, or algebra prep",
+                "kids": [
+                    14
+                ]
+            }
+        ],
+        "Afternoon": [
+            {
+                "time": "2:00 PM - 3:30 PM",
+                "category": "phys",
+                "emoji": "\ud83c\udf33",
+                "tag": "Physical",
+                "title": "El Sereno Rec Center Play",
+                "desc": "Games & sports at the park",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ],
+                "shuffleable": true
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Time & Picture Books",
+                "desc": "Parent reads picture books aloud; quiet independent play alongside",
+                "kids": [
+                    5
+                ]
+            },
+            {
+                "time": "4:00 PM - 5:00 PM",
+                "category": "edu",
+                "emoji": "\ud83e\udd2b",
+                "tag": "Educational",
+                "title": "Quiet Reading Time",
+                "desc": "Independent reading - chapter books, novels, or hobby reading",
+                "kids": [
+                    8,
+                    14
+                ]
+            }
+        ],
+        "Evening": [
+            {
+                "time": "6:30 PM - 7:30 PM",
+                "category": "phys",
+                "emoji": "\ud83d\udeb6",
+                "tag": "Physical",
+                "title": "Evening Stroll",
+                "desc": "Neighborhood stroll or backyard active play",
+                "kids": [
+                    5,
+                    8,
+                    14
+                ]
+            },
+            {
+                "time": "7:30 PM - 8:30 PM",
+                "category": "other",
+                "emoji": "\ud83c\udf19",
+                "tag": "Leisure",
+                "title": "Wind-down Reading",
+                "desc": "Phonics story reading & early bedtime",
+                "kids": [
+                    5,
+                    8
+                ]
+            },
+            {
+                "time": "7:30 PM - 9:00 PM",
+                "category": "other",
+                "emoji": "\ud83d\udecb\ufe0f",
+                "tag": "Leisure",
+                "title": "Tween/Teen Relaxation",
+                "desc": "Personal reading, project prep, next day planning",
+                "kids": [
+                    14
+                ]
+            }
+        ]
+    }
+};
+        const weatherData = {
+    "temp": 87,
+    "description": "Mainly Clear / Partly Cloudy",
+    "icon": "\u26c5",
+    "advice": "Perfect summer weather! Balance outdoor activities in the morning and educational study in the afternoon.",
+    "is_hot": false,
+    "is_rainy": false
+};
+        const attractionData = [
+    {
+        "name": "El Sereno Recreation Center",
+        "type": "Park & Sports (Physical)",
+        "setting": "\ud83c\udf33 Outdoor",
+        "suitability": "All Ages",
+        "distance": 0.488183441386883
+    },
+    {
+        "name": "Ascot Hills Park",
+        "type": "Nature & Hiking (Physical)",
+        "setting": "\ud83c\udf33 Outdoor",
+        "suitability": "All Ages",
+        "distance": 0.8582642449409441
+    },
+    {
+        "name": "Belvedere Community Regional Park Pool",
+        "type": "Swimming Pool (Physical)",
+        "setting": "\ud83c\udf33 Outdoor Pool",
+        "suitability": "All Ages",
+        "distance": 3.0107939131747883
+    },
+    {
+        "name": "LA State Historic Park",
+        "type": "State Park (Physical)",
+        "setting": "\ud83c\udf33 Outdoor",
+        "suitability": "All Ages",
+        "distance": 3.292095545193415
+    },
+    {
+        "name": "Lacy Park",
+        "type": "Scenic Park (Physical)",
+        "setting": "\ud83c\udf33 Outdoor",
+        "suitability": "All Ages",
+        "distance": 3.89530967924615
+    },
+    {
+        "name": "Norton Simon Museum",
+        "type": "Art Museum (Educational)",
+        "setting": "\ud83c\udfdb\ufe0f Indoor",
+        "suitability": "Teens Focus",
+        "distance": 4.5930373979505985
+    },
+    {
+        "name": "Kidspace Children's Museum",
+        "type": "Children's Museum (Educational)",
+        "setting": "\ud83c\udfdb\ufe0f Indoor/Outdoor",
+        "suitability": "8yo Focus",
+        "distance": 4.639548480180737
+    },
+    {
+        "name": "Huntington Library & Botanical Gardens",
+        "type": "Gardens & Museum (Educational)",
+        "setting": "\ud83c\udfdb\ufe0f Indoor/Outdoor",
+        "suitability": "All Ages",
+        "distance": 4.903571774318968
+    },
+    {
+        "name": "Griffith Observatory",
+        "type": "Space Observatory (Educational)",
+        "setting": "\ud83c\udfdb\ufe0f Indoor/Outdoor",
+        "suitability": "All Ages",
+        "distance": 7.469249285101387
+    },
+    {
+        "name": "California Science Center",
+        "type": "Science Museum (Educational)",
+        "setting": "\ud83c\udfdb\ufe0f Indoor",
+        "suitability": "All Ages",
+        "distance": 7.643160690858422
+    },
+    {
+        "name": "Natural History Museum of LA",
+        "type": "History Museum (Educational)",
+        "setting": "\ud83c\udfdb\ufe0f Indoor",
+        "suitability": "All Ages",
+        "distance": 7.651587289143625
+    },
+    {
+        "name": "Eaton Canyon Nature Center",
+        "type": "Hiking & Waterfall (Physical)",
+        "setting": "\ud83c\udf33 Outdoor",
+        "suitability": "All Ages",
+        "distance": 8.224942589319626
+    }
+];
+        const childProfiles = [
+    {
+        "age": 5,
+        "hobbies": [
+            "drawing"
+        ],
+        "needs": []
+    },
+    {
+        "age": 8,
+        "hobbies": [
+            "swimming"
+        ],
+        "needs": [
+            "reading-remediation"
+        ]
+    },
+    {
+        "age": 14,
+        "hobbies": [
+            "soccer"
+        ],
+        "needs": []
+    }
+];
+        const locationName = "El Sereno, Montecito Heights, Los Angeles, Los Angeles County, California, 90032, United States";
+        const appErrors = [];
+
+        // Render any geocoding/weather errors surfaced by the generator script
+        if (Array.isArray(appErrors) && appErrors.length > 0) {
+            const banner = document.getElementById('error-banner');
+            banner.innerHTML = appErrors
+                .map(e => `<strong>${e.error}:</strong> ${e.details}`)
+                .join('<br>');
+        }
+
+        // Overview content (HTML)
+        const overview6HTML = `
+<h2>6‑Week Summer Schedule – High‑Level Overview</h2>
+<div class="overview-table-scroll">
+<table class="overview-table" style="width:100%; border-collapse:collapse; margin-top:1rem;">
+<tr><th>Week</th><th>Core Activities (Mon‑Thu)</th><th>Friday Field Trip</th><th>Highlights</th></tr>
+<tr><td>1</td><td>📖 Reading Remediation (8yo) – Phonics & sight‑words<br>🔢 Math Drills (8yo) – Multiplication worksheets<br>⚽ Soccer Practice (14yo)<br>💻 Coding Project (16yo)</td><td>🎲 California Science Center (IMAX & Space Shuttle Endeavour)</td><td>Outdoor learning, hands‑on science exhibits</td></tr>
+<tr><td>2</td><td>📖 Reading Hour (8yo) – Storybooks<br>🧩 Math Fun (8yo) – Puzzle games<br>🚴 Bike Ride (14yo)<br>🤝 Community Service Planning (16yo)</td><td>🎲 Griffith Observatory & Hike</td><td>Sunset view, planetarium show, short hike</td></tr>
+<tr><td>3</td><td>📖 Guided Reading (8yo) – Sight‑words<br>🔢 Multiplication Practice (8yo)<br>🛝 Playground Play (14yo)<br>🖥️ Python Script Building (16yo)</td><td>🎲 Huntington Library & Botanical Gardens</td><td>Gardens, art gallery, tranquil stroll</td></tr>
+<tr><td>4</td><td>📖 Reading Hour (8yo) – Independent reading<br>🧩 Math Games (8yo)<br>⚽ Soccer Drills (14yo)<br>🎨 Creative Passion Projects (16yo)</td><td>🎲 La Brea Tar Pits & LACMA</td><td>Fossil pits, art museum, interactive exhibits</td></tr>
+<tr><td>5</td><td>📖 Reading Remediation (8yo) – Phonics cards<br>🔢 Multiplication Worksheets (8yo)<br>🚴 Bike Ride (14yo)<br>💻 Advanced Coding (16yo)</td><td>🎲 California Science Center (repeat)</td><td>Reinforce science concepts from week 1</td></tr>
+<tr><td>6</td><td>📖 Reading Hour (8yo) – Storytime<br>🧩 Math Fun (8yo)<br>🛝 Playground/Tag (14yo)<br>🤝 Volunteer Coordination (16yo)</td><td>🎲 Griffith Observatory & Hike (repeat)</td><td>End of cycle, recap of astronomy & hiking</td></tr>
+</table>
+</div>
+<p>*Each weekday also includes a Morning Family Walk 🌳, Afternoon Quiet Reading 🤫, and Evening Stroll 🚶. Schedule adapts to weather.*`;
+        const overview8HTML = `
+<h2>8‑Week Summer Schedule – High‑Level Overview</h2>
+<div class="overview-table-scroll">
+<table class="overview-table" style="width:100%; border-collapse:collapse; margin-top:1rem;">
+<tr><th>Week</th><th>Core Activities (Mon‑Thu)</th><th>Friday Field Trip</th><th>Highlights</th></tr>
+<tr><td>1</td><td>📖 Reading Remediation (8yo) – Phonics & sight‑words<br>🔢 Math Drills (8yo) – Multiplication worksheets<br>⚽ Soccer Practice (14yo)<br>💻 Coding Project (16yo)</td><td>🎲 California Science Center (IMAX & Space Shuttle Endeavour)</td><td>Outdoor learning, hands‑on science exhibits</td></tr>
+<tr><td>2</td><td>📖 Reading Hour (8yo) – Storybooks<br>🧩 Math Fun (8yo) – Puzzle games<br>🚴 Bike Ride (14yo)<br>🤝 Community Service Planning (16yo)</td><td>🎲 Griffith Observatory & Hike</td><td>Sunset view, planetarium show, short hike</td></tr>
+<tr><td>3</td><td>📖 Guided Reading (8yo) – Sight‑words<br>🔢 Multiplication Practice (8yo)<br>🛝 Playground Play (14yo)<br>🖥️ Python Script Building (16yo)</td><td>🎲 Huntington Library & Botanical Gardens</td><td>Gardens, art gallery, tranquil stroll</td></tr>
+<tr><td>4</td><td>📖 Reading Hour (8yo) – Independent reading<br>🧩 Math Games (8yo)<br>⚽ Soccer Drills (14yo)<br>🎨 Creative Passion Projects (16yo)</td><td>🎲 La Brea Tar Pits & LACMA</td><td>Fossil pits, art museum, interactive exhibits</td></tr>
+<tr><td>5</td><td>📖 Reading Remediation (8yo) – Phonics cards<br>🔢 Multiplication Worksheets (8yo)<br>🚴 Bike Ride (14yo)<br>💻 Advanced Coding (16yo)</td><td>🎲 California Science Center (repeat)</td><td>Reinforce science concepts from week 1</td></tr>
+<tr><td>6</td><td>📖 Reading Hour (8yo) – Storytime<br>🧩 Math Fun (8yo)<br>🛝 Playground/Tag (14yo)<br>🤝 Volunteer Coordination (16yo)</td><td>🎲 Griffith Observatory & Hike (repeat)</td><td>End of cycle, recap of astronomy & hiking</td></tr>
+<tr><td>7</td><td>📖 Reading Enrichment (8yo) – Chapter reading<br>🔢 Math Challenge (8yo) – Timed drills<br>⚽ Team Sports (14yo) – Mini‑tournament<br>💻 Project Showcase (16yo)</td><td>🎲 Kidspace Children’s Museum (Pasadena)</td><td>Interactive science exhibits, art stations</td></tr>
+<tr><td>8</td><td>📖 Reading Celebration (8yo) – Book club<br>🧩 Math Games Tournament (8yo)<br>🚴 Outdoor Adventure (14yo) – Bike trail<br>🤝 Community Service Day (16yo)</td><td>🎲 Santa Monica Pier & Arcade</td><td>Beach day, games, wrap‑up celebration</td></tr>
+</table>
+</div>
+<p>*All weeks include a Morning Family Walk 🌳, Afternoon Quiet Reading 🤫, and Evening Stroll 🚶. Weather‑adaptive schedule applies.*`;
+
+        // Function to open modal with specific overview
+        function openOverview(weeks) {
+            const modal = document.getElementById('overview-modal');
+            const body = document.getElementById('overview-body');
+            body.innerHTML = weeks === 6 ? overview6HTML : overview8HTML;
+            modal.style.display = 'flex';
+        }
+
+        document.getElementById('overview-6-btn').addEventListener('click', () => openOverview(6));
+        document.getElementById('overview-8-btn').addEventListener('click', () => openOverview(8));
+        document.getElementById('close-modal').addEventListener('click', () => {
+            document.getElementById('overview-modal').style.display = 'none';
+        });
+        document.getElementById('print-overview-btn').addEventListener('click', () => {
+            document.body.classList.add('printing-overview-only');
+            window.print();
+        });
+        window.addEventListener('afterprint', () => {
+            document.body.classList.remove('printing-overview-only');
+        });
+
+        // Initialize UI
+        document.getElementById('location-text').innerText = locationName;
+
+        // Render Profiles
+        const profileContainer = document.getElementById('profile-container');
+        profileContainer.innerHTML = '';
+        childProfiles.forEach(p => {
+            let label = `Age ${p.age}`;
+            if (p.hobbies && p.hobbies.length > 0) {
+                label += ` (${p.hobbies.join(', ')})`;
+            }
+            if (p.needs && p.needs.length > 0) {
+                label += ` 🎯 ${p.needs.join(', ')}`;
+            }
+            const badge = document.createElement('span');
+            badge.className = 'profile-badge';
+            badge.innerText = label;
+            profileContainer.appendChild(badge);
+        });
+
+        // Render Weather
+        if (weatherData) {
+            document.getElementById('weather-temp').innerText = `${weatherData.temp}°F`;
+            document.getElementById('weather-desc').innerText = weatherData.description;
+            document.getElementById('weather-icon').innerText = weatherData.icon;
+            document.getElementById('weather-alert').innerText = weatherData.advice;
+        }
+
+        // Render Attractions
+        const attractionList = document.getElementById('attraction-list');
+        attractionList.innerHTML = '';
+        attractionData.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'attraction-item';
+            li.innerHTML = `
+                <div class="attraction-name">${item.name}</div>
+                <div class="attraction-meta" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                        <span class="badge setting-badge">${item.setting}</span>
+                        <span class="badge suitability-badge">${item.suitability}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); padding-top: 4px;">
+                        <span>${item.type.split(" (")[0]}</span>
+                        <span class="attraction-distance" style="color: var(--accent-teal); font-weight: 700;">${item.distance.toFixed(1)} mi</span>
+                    </div>
+                </div>
+            `;
+            attractionList.appendChild(li);
+        });
+
+        // Populate Child Filter dropdown options
+        const filterSelect = document.getElementById('child-filter');
+        childProfiles.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.age;
+            opt.innerText = `Age ${p.age} Only`;
+            filterSelect.appendChild(opt);
+        });
+        function handleViewModeChange() {
+            const modeSelect = document.getElementById('view-mode-select');
+            const mode = modeSelect.value;
+            modeSelect.dataset.mode = mode;
+            const filterContainer = document.getElementById('filter-container');
+            if (mode === 'separate') {
+                filterContainer.style.display = 'none';
+            } else {
+                filterContainer.style.display = 'flex';
+            }
+            renderSchedule();
+        }
+
+        function getFieldTripDay() {
+            return Object.keys(scheduleData).find(day =>
+                (scheduleData[day]['Morning'] || []).some(item => item.tag === 'Field Trip')
+            );
+        }
+
+        // Re-rolls which day gets which flexible (non weather-locked, non
+        // field-trip) afternoon activity. Weather-driven days (pool/library/
+        // museum) and the field trip day are left untouched.
+        function shuffleWeek() {
+            const fieldTripDay = getFieldTripDay();
+            const eligibleDays = Object.keys(scheduleData).filter(day => {
+                if (day === fieldTripDay) return false;
+                return (scheduleData[day]['Afternoon'] || []).some(item => item.shuffleable);
+            });
+
+            if (eligibleDays.length < 2) {
+                alert('Not enough flexible activities this week to shuffle right now (weather-driven days stay fixed).');
+                return;
+            }
+
+            const shuffleableBlocks = eligibleDays.map(day =>
+                scheduleData[day]['Afternoon'].filter(item => item.shuffleable)
+            );
+            const fixedBlocks = eligibleDays.map(day =>
+                scheduleData[day]['Afternoon'].filter(item => !item.shuffleable)
+            );
+
+            // Fisher-Yates shuffle of the blocks themselves (each block stays intact).
+            for (let i = shuffleableBlocks.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffleableBlocks[i], shuffleableBlocks[j]] = [shuffleableBlocks[j], shuffleableBlocks[i]];
+            }
+
+            eligibleDays.forEach((day, i) => {
+                scheduleData[day]['Afternoon'] = [...shuffleableBlocks[i], ...fixedBlocks[i]];
+            });
+
+            renderSchedule();
+        }
+
+        function getVisibleDays() {
+            const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const checkedDays = Array.from(document.querySelectorAll('.day-filter-checkbox'))
+                .filter(cb => cb.checked)
+                .map(cb => cb.dataset.day);
+            return allDays.filter(day => checkedDays.includes(day));
+        }
+
+        function renderSchedule() {
+            const container = document.getElementById('schedule-container');
+            container.innerHTML = '';
+
+            const mode = document.getElementById('view-mode-select').value;
+            const filterVal = document.getElementById('child-filter').value;
+            const days = getVisibleDays();
+            const times = ['Morning', 'Afternoon', 'Evening'];
+
+            if (days.length === 0) {
+                const msg = document.createElement('div');
+                msg.className = 'card';
+                msg.style.padding = '1.5rem';
+                msg.style.textAlign = 'center';
+                msg.style.color = 'var(--text-muted)';
+                msg.innerText = 'No days selected. Check at least one day above to view the schedule.';
+                container.appendChild(msg);
+                return;
+            }
+
+            if (mode === 'unified') {
+                // Unified Calendar
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.padding = '1rem';
+
+                const grid = document.createElement('div');
+                grid.className = 'schedule-grid';
+
+                buildCalendarGrid(grid, days, times, filterVal);
+                card.appendChild(grid);
+                container.appendChild(card);
+            } else {
+                // Separate Calendars
+                childProfiles.forEach(profile => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'separate-calendar-wrapper';
+                    wrapper.style.display = 'flex';
+                    wrapper.style.flexDirection = 'column';
+                    wrapper.style.gap = '0.75rem';
+
+                    const titleCard = document.createElement('div');
+                    titleCard.style.display = 'flex';
+                    titleCard.style.justifyContent = 'space-between';
+                    titleCard.style.alignItems = 'center';
+                    titleCard.style.marginTop = '0.5rem';
+
+                    const title = document.createElement('h3');
+                    title.innerText = `Schedule for Age ${profile.age}`;
+                    title.style.fontSize = '1.25rem';
+                    title.style.color = 'var(--accent-teal)';
+                    titleCard.appendChild(title);
+
+                    wrapper.appendChild(titleCard);
+
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.style.padding = '1rem';
+
+                    const grid = document.createElement('div');
+                    grid.className = 'schedule-grid';
+
+                    buildCalendarGrid(grid, days, times, profile.age.toString());
+                    card.appendChild(grid);
+                    wrapper.appendChild(card);
+                    container.appendChild(wrapper);
+                });
+            }
+        }
+
+        function buildCalendarGrid(grid, days, times, filterAgeStr) {
+            grid.style.setProperty('--day-count', days.length);
+
+            // Add Header Row
+            const emptyHeader = document.createElement('div');
+            emptyHeader.className = 'grid-header';
+            emptyHeader.innerText = 'Time';
+            grid.appendChild(emptyHeader);
+
+            days.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'grid-header';
+                header.innerText = day;
+                grid.appendChild(header);
+            });
+
+            // Time blocks
+            times.forEach(time => {
+                const timeLabel = document.createElement('div');
+                timeLabel.className = 'time-label';
+                timeLabel.innerText = time;
+                grid.appendChild(timeLabel);
+
+                days.forEach(day => {
+                    const cell = document.createElement('div');
+                    cell.className = 'schedule-cell';
+                    cell.dataset.day = day;
+                    cell.dataset.time = time;
+
+                    const activities = scheduleData[day][time] || [];
+
+                    activities.forEach((act, index) => {
+                        // Filter Logic: match if showing all or if the kid's age is in the act's kids array
+                        const isMatch = filterAgeStr === 'all' || (act.kids && act.kids.includes(parseInt(filterAgeStr)));
+                        if (!isMatch) return;
+
+                        const card = document.createElement('div');
+                        card.className = `activity-card ${act.category}`;
+                        card.dataset.index = index;
+
+                        // Header
+                        const cardHeader = document.createElement('div');
+                        cardHeader.className = 'activity-card-header';
+
+                        const emojiSpan = document.createElement('span');
+                        emojiSpan.className = 'activity-emoji';
+                        emojiSpan.innerText = act.emoji || '📅';
+
+                        const tagSpan = document.createElement('span');
+                        tagSpan.className = 'activity-tag-badge';
+                        tagSpan.innerText = act.tag || 'Activity';
+
+                        cardHeader.appendChild(emojiSpan);
+                        cardHeader.appendChild(tagSpan);
+
+                        // Title
+                        const titleSpan = document.createElement('div');
+                        titleSpan.className = 'activity-title';
+                        titleSpan.contentEditable = true;
+                        titleSpan.innerText = act.title || 'Activity';
+
+                        // Desc
+                        const descSpan = document.createElement('div');
+                        descSpan.className = 'activity-desc';
+                        descSpan.contentEditable = true;
+                        descSpan.innerText = act.desc || '';
+
+                        // Time
+                        const timeSpan = document.createElement('div');
+                        timeSpan.className = 'time';
+                        timeSpan.innerText = act.time;
+
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.className = 'completed-checkbox';
+                        checkbox.onclick = (e) => {
+                            e.stopPropagation();
+                            card.classList.toggle('completed');
+                        };
+
+                        card.appendChild(cardHeader);
+                        card.appendChild(titleSpan);
+                        card.appendChild(descSpan);
+
+                        // Add Randomizer button inside the Friday Field Trip card
+                        if (act.tag === 'Field Trip' && act.title.includes('Friday')) {
+                            const randBtn = document.createElement('button');
+                            randBtn.className = 'btn btn-secondary';
+                            randBtn.style.fontSize = '0.65rem';
+                            randBtn.style.padding = '0.25rem 0.5rem';
+                            randBtn.style.marginTop = '0.35rem';
+                            randBtn.style.marginBottom = '0.25rem';
+                            randBtn.style.width = 'fit-content';
+                            randBtn.style.height = 'auto';
+                            randBtn.style.display = 'flex';
+                            randBtn.style.alignItems = 'center';
+                            randBtn.style.gap = '4px';
+                            randBtn.innerText = '🎲 Spin Outing Wheel';
+                            randBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                triggerOutingWheel(descSpan);
+                            };
+                            card.appendChild(randBtn);
+                        }
+
+                        card.appendChild(timeSpan);
+                        card.appendChild(checkbox);
+                        cell.appendChild(card);
+                    });
+
+                    grid.appendChild(cell);
+                });
+            });
+        }
+
+        function triggerOutingWheel(descElem) {
+            const outings = [
+                "🦖 California Science Center (IMAX & Space Shuttle Endeavour)",
+                "🪐 Griffith Observatory & Planetarium Show",
+                "🌺 Huntington Library & Botanical Gardens (Pasadena)",
+                "🛝 Kidspace Children's Museum (8yo Focus, Pasadena)",
+                "🌊 Santa Monica Pier & Arcade Beach Day",
+                "🥾 Eaton Canyon Waterfall Hike (Physical)",
+                "🦣 La Brea Tar Pits & LACMA Museum Outing"
+            ];
+
+            let count = 0;
+            const originalHTML = descElem.innerHTML;
+            const interval = setInterval(() => {
+                descElem.innerHTML = `<span style="color: var(--accent-teal); font-weight: 600;">🎲 Cycling:</span> ${outings[Math.floor(Math.random() * outings.length)]}`;
+                count++;
+                if (count > 10) {
+                    clearInterval(interval);
+                    const selected = outings[Math.floor(Math.random() * outings.length)];
+                    descElem.innerHTML = `<strong>Selected Outing:</strong> ${selected}<br><small style="color: var(--text-muted); display: block; margin-top: 4px;">Click Spin again or double-click to customize!</small>`;
+                }
+            }, 100);
+        }
+
+        // Call render initially
+        renderSchedule();
+
+        // Render Worksheet & Learning Center
+        const resourceGrid = document.getElementById('resource-grid');
+        resourceGrid.innerHTML = '';
+
+        // Determine which resources to show based on profiles
+        const hasYoungerKid = childProfiles.some(p => p.age < 11);
+        const hasOlderKid = childProfiles.some(p => p.age >= 11);
+        const hasReadingNeeds = childProfiles.some(p => p.needs && p.needs.includes('reading-remediation'));
+        const hasMathNeeds = childProfiles.some(p => p.needs && p.needs.includes('math-drills'));
+        const hasVolunteering = childProfiles.some(p => p.hobbies && p.hobbies.includes('volunteering'));
+
+        // Always show coloring for young kids
+        if (hasYoungerKid) {
+            const card = document.createElement('div');
+            card.className = 'resource-card';
+            card.innerHTML = `
+                <h4>🎨 Coloring & Creativity</h4>
+                <p>Perfect for fine motor skills and creativity for younger kids. Print directly from these free archives:</p>
+                <ul class="resource-link-list">
+                    <li class="resource-link-item"><a href="https://www.crayola.com/featured/free-coloring-pages/" target="_blank">Crayola Free Coloring Pages ↗</a></li>
+                    <li class="resource-link-item"><a href="http://www.supercoloring.com/" target="_blank">Supercoloring Archive (100k+ pages) ↗</a></li>
+                </ul>
+            `;
+            resourceGrid.appendChild(card);
+        }
+
+        // Show Reading Remediation Resources
+        if (hasReadingNeeds) {
+            const card = document.createElement('div');
+            card.className = 'resource-card';
+            card.innerHTML = `
+                <h4>📚 Reading & Phonics (Remediation)</h4>
+                <p>Curated reading worksheets, sight words, and spelling drills for children struggling with reading:</p>
+                <ul class="resource-link-list">
+                    <li class="resource-link-item"><a href="https://www.k5learning.com/free-reading-worksheets" target="_blank">K5 Learning Free Reading Worksheets ↗</a></li>
+                    <li class="resource-link-item"><a href="https://www.education.com/worksheets/reading/" target="_blank">Education.com Phonics & Reading Sheets ↗</a></li>
+                    <li class="resource-link-item"><a href="https://www.mathworksheets4kids.com/reading-comprehension.php" target="_blank">Worksheets4Kids Reading Comprehension ↗</a></li>
+                </ul>
+            `;
+            resourceGrid.appendChild(card);
+        }
+
+        // Show Multiplication / Math Drills
+        if (hasMathNeeds || hasYoungerKid) {
+            const card = document.createElement('div');
+            card.className = 'resource-card';
+            card.innerHTML = `
+                <h4>🔢 Math Drills & Multiplication</h4>
+                <p>Printable practice worksheets for mastering multiplication facts and core math skills:</p>
+                <ul class="resource-link-list">
+                    <li class="resource-link-item"><a href="https://www.k5learning.com/free-math-worksheets/third-grade-3/multiplication" target="_blank">K5 Learning 3rd Grade Multiplication ↗</a></li>
+                    <li class="resource-link-item"><a href="https://www.math-drills.com/multiplication.php" target="_blank">Math-Drills Multiplication Fact Drills ↗</a></li>
+                </ul>
+            `;
+            resourceGrid.appendChild(card);
+        }
+
+        // Older Kids/Teens Focus
+        if (hasOlderKid) {
+            const card = document.createElement('div');
+            card.className = 'resource-card';
+            card.innerHTML = `
+                <h4>💻 Advanced Learning & Coding</h4>
+                <p>Educational challenges and resources for teens, including coding, science projects, and reading logs:</p>
+                <ul class="resource-link-list">
+                    <li class="resource-link-item"><a href="https://code.org/hourofcode" target="_blank">Hour of Code Projects ↗</a></li>
+                    <li class="resource-link-item"><a href="https://www.khanacademy.org" target="_blank">Khan Academy Custom Courses ↗</a></li>
+                </ul>
+            `;
+            resourceGrid.appendChild(card);
+        }
+
+        // Always show STEM & science experiments
+        {
+            const card = document.createElement('div');
+            card.className = 'resource-card';
+            card.innerHTML = `
+                <h4>🔬 STEM & Science Experiments</h4>
+                <p>Hands-on experiments and project ideas to keep curious minds engaged all summer:</p>
+                <ul class="resource-link-list">
+                    <li class="resource-link-item"><a href="https://www.sciencebuddies.org/science-fair-projects/project-ideas" target="_blank">Science Buddies Project Ideas ↗</a></li>
+                    <li class="resource-link-item"><a href="https://www.nasa.gov/stem/" target="_blank">NASA STEM Activities ↗</a></li>
+                </ul>
+            `;
+            resourceGrid.appendChild(card);
+        }
+
+        // Always show general reading enrichment (beyond remediation-specific worksheets)
+        {
+            const card = document.createElement('div');
+            card.className = 'resource-card';
+            card.innerHTML = `
+                <h4>📚 Reading Enrichment & Library Programs</h4>
+                <p>Keep reading fun over the summer with library programs and printable activities:</p>
+                <ul class="resource-link-list">
+                    <li class="resource-link-item"><a href="https://www.cslpreads.org" target="_blank">Collaborative Summer Library Program ↗</a></li>
+                    <li class="resource-link-item"><a href="https://www.readwritethink.org" target="_blank">ReadWriteThink Printables ↗</a></li>
+                </ul>
+            `;
+            resourceGrid.appendChild(card);
+        }
+
+        // Puzzles & games for younger kids
+        if (hasYoungerKid) {
+            const card = document.createElement('div');
+            card.className = 'resource-card';
+            card.innerHTML = `
+                <h4>🧩 Puzzles & Activity Sheets</h4>
+                <p>Brain teasers, mazes, and printable activity sheets to fill downtime:</p>
+                <ul class="resource-link-list">
+                    <li class="resource-link-item"><a href="https://www.highlightskids.com" target="_blank">Highlights Kids Puzzles ↗</a></li>
+                    <li class="resource-link-item"><a href="https://pbskids.org/games" target="_blank">PBS Kids Games ↗</a></li>
+                </ul>
+            `;
+            resourceGrid.appendChild(card);
+        }
+
+        // Volunteering & community service for kids with that hobby
+        if (hasVolunteering) {
+            const card = document.createElement('div');
+            card.className = 'resource-card';
+            card.innerHTML = `
+                <h4>🤝 Volunteering & Community Service</h4>
+                <p>Find local volunteer opportunities and youth-led service projects:</p>
+                <ul class="resource-link-list">
+                    <li class="resource-link-item"><a href="https://www.volunteermatch.org" target="_blank">VolunteerMatch ↗</a></li>
+                    <li class="resource-link-item"><a href="https://www.dosomething.org" target="_blank">DoSomething.org Campaigns ↗</a></li>
+                </ul>
+            `;
+            resourceGrid.appendChild(card);
+        }
+
+        // Toggle Theme
+        function updateThemeButton(theme) {
+            const btn = document.getElementById('theme-btn');
+            btn.innerText = theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode';
+            btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            try {
+                localStorage.setItem('summerScheduleTheme', newTheme);
+            } catch (e) {
+                // localStorage unavailable (e.g. private browsing) - theme just won't persist.
+            }
+            updateThemeButton(newTheme);
+        }
+
+        // Sync the theme toggle button label with whatever theme the early
+        // inline script (in <head>) already applied from localStorage.
+        updateThemeButton(document.documentElement.getAttribute('data-theme'));
+    </script>
+</body>
+
+</html>
